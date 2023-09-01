@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">test-app</string>
+    <string name="start_scan_ble">开始扫描BLE</string>
+</resources>

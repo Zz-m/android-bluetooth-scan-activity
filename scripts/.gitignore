@@ -1,0 +1,3 @@
+# 包含密码等信息，不能上传
+secret.properties
+*.gpg

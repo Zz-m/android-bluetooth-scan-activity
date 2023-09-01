@@ -1,0 +1,76 @@
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+tasks.register('androidSourcesJar', Jar) {
+    archiveClassifier.set('sources')
+    if (project.plugins.findPlugin("com.android.library")) {
+        // For Android libraries
+        from android.sourceSets.main.java.srcDirs
+        from android.sourceSets.main.kotlin.srcDirs
+    } else {
+        // For pure Kotlin libraries, in case you have them
+        from sourceSets.main.java.srcDirs
+        from sourceSets.main.kotlin.srcDirs
+    }
+}
+
+artifacts {
+    archives androidSourcesJar
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                // The coordinates of the library, being set from variables that
+                // we'll set up later
+                groupId PUBLISH_GROUP_ID
+                artifactId PUBLISH_ARTIFACT_ID
+                version PUBLISH_VERSION
+
+                // Two artifacts, the `aar` (or `jar`) and the sources
+                if (project.plugins.findPlugin("com.android.library")) {
+                    from components.release
+                } else {
+                    from components.java
+                }
+
+//                artifact androidSourcesJar
+//                artifact javadocJar
+
+                // Mostly self-explanatory metadata
+                pom {
+                    name = PUBLISH_ARTIFACT_ID
+                    description = 'Android bluetooth scan activity'
+                    url = 'https://github.com/Zz-m/android-bluetooth-scan-activity'
+                    licenses {
+                        license {
+                            name = 'MIT'
+                            url = 'https://github.com/Zz-m/android-bluetooth-scan-activity/blob/main/LICENSE'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'Zz-m'
+                            name = 'John Smith'
+                            email = 'adjim234@gmail.com'
+                        }
+                        // Add all other devs here...
+                    }
+
+                    // Version control info - if you're using GitHub, follow the
+                    // format as seen here
+                    scm {
+                        connection = 'scm:git@github.com:Zz-m/android-bluetooth-scan-activity.git'
+                        developerConnection = 'scm:git:ssh://github.com:Zz-m/android-bluetooth-scan-activity.git'
+                        url = 'https://github.com/Zz-m/android-bluetooth-scan-activity/tree/main'
+                    }
+                }
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications
+}
