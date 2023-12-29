@@ -221,7 +221,12 @@ public class BluetoothScanFragment extends Fragment {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
-            BleUtil.checkBlePermission(BluetoothScanFragment.this.requireContext());
+            Context context = getContext();
+            if (context == null) {
+                logger.warn("onScanResult, but context is finalized.");
+                return;
+            }
+            BleUtil.checkBlePermission(context);
             BluetoothDevice device = result.getDevice();
             logger.debug("-------------------------");
             logger.debug("name:{}", device.getName());
