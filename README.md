@@ -2,4 +2,4 @@
 
 Usage:
 
-implementation 'cn.denghanxi:android-bluetooth-scan-activity:LATEST'
+implementation 'cn.denghanxi:android-bluetooth-scan-activity:0.0.2'
