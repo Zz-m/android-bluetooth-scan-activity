@@ -1,8 +1,8 @@
 package cn.denghanxi.android_bluetooth_scan.lib;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.os.Bundle;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public class BluetoothScanActivity extends AppCompatActivity {
 
@@ -16,8 +16,10 @@ public class BluetoothScanActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bluetooth_scan);
 
-        getSupportFragmentManager().beginTransaction()
-                .add(R.id.fragment_container, BluetoothScanFragment.newInstance())
-                .commitNow();
+        if (savedInstanceState != null) {
+            getSupportFragmentManager().beginTransaction()
+                    .add(R.id.fragment_container, BluetoothScanFragment.newInstance())
+                    .commitNow();
+        }
     }
 }
