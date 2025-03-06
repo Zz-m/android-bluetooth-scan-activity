@@ -1,0 +1,46 @@
+<configuration>
+
+<!--    <property scope="context" name="LOG_DIR" value="${EXT_DIR:-/sdcard}/Android/data/${PACKAGE_NAME}/cache/logback" />-->
+    <property name="LOG_DIR" value="${DATA_DIR}/log" />
+
+    <appender name="logcat" class="ch.qos.logback.classic.android.LogcatAppender">
+        <tagEncoder>
+            <pattern>%d{"HH:mm:ss,SSS"} %logger{35}</pattern>
+        </tagEncoder>
+        <encoder>
+            <pattern>[%thread] %msg</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="Rolling" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <lazy>true</lazy>
+        <!-- active log file -->
+        <file>${LOG_DIR}/log.txt</file>
+        <encoder>
+            <pattern>%d [%thread] %logger{35} - %msg%n</pattern>
+        </encoder>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover period -->
+            <fileNamePattern>${LOG_DIR}/log.%d{yyyy-MM-dd}.txt</fileNamePattern>
+            <!-- keep 27 days' worth of history  capped at 100MB total size -->
+            <maxHistory>27</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="Crash" class="ch.qos.logback.core.FileAppender">
+        <!-- lazy initialization: don't create the file until 1st write -->
+        <lazy>true</lazy>
+        <file>${LOG_DIR}/crash.txt</file>
+        <encoder>
+            <pattern>%d [%thread] %-5level %logger{35} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="DEBUG">
+        <appender-ref ref="logcat" />
+        <appender-ref ref="Rolling" />
+    </root>
+
+</configuration>

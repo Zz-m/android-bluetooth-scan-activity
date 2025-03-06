@@ -1,5 +1,6 @@
 package cn.denghanxi.android_bluetooth_scan.lib;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothDevice;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -60,6 +61,7 @@ class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.ViewHolde
             deviceAddress = itemView.findViewById(R.id.tv_device_address);
         }
 
+        @SuppressLint("MissingPermission")
         void updateView(BluetoothDevice device) {
             deviceName.setText(device.getName());
             deviceAddress.setText(device.getAddress());

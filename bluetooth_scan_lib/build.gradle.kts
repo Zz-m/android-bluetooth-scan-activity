@@ -66,7 +66,7 @@ dependencies {
 extra.apply {
     set("PUBLISH_GROUP_ID", "cn.denghanxi")
     set("PUBLISH_ARTIFACT_ID", "android-bluetooth-scan-activity")
-    set("PUBLISH_VERSION", "0.0.2")
+    set("PUBLISH_VERSION", "0.0.3")
 }
 
 apply(from = "${rootProject.projectDir}/scripts/publish-module.gradle")
