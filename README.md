@@ -2,4 +2,4 @@
 
 Usage:
 
-implementation 'cn.denghanxi:android-bluetooth-scan-activity:0.0.3'
+[JitPack](https://jitpack.io/#Zz-m/android-bluetooth-scan-activity)

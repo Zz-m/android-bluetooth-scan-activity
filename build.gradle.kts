@@ -7,4 +7,5 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.1.10" apply false
 }
 
-apply(from = "${rootDir}/scripts/publish-root.gradle")
+//publish to maven central
+//apply(from = "${rootDir}/scripts/publish-root.gradle")

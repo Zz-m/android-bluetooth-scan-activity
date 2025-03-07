@@ -1,6 +1,7 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("maven-publish")
 }
 
 android {
@@ -34,11 +35,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 }
 
@@ -62,11 +63,25 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
 }
 
-//publish
-extra.apply {
-    set("PUBLISH_GROUP_ID", "cn.denghanxi")
-    set("PUBLISH_ARTIFACT_ID", "android-bluetooth-scan-activity")
-    set("PUBLISH_VERSION", "0.0.3")
-}
+//publish to maven central
+//extra.apply {
+//    set("PUBLISH_GROUP_ID", "cn.denghanxi")
+//    set("PUBLISH_ARTIFACT_ID", "android-bluetooth-scan-activity")
+//    set("PUBLISH_VERSION", "0.0.3")
+//}
+//apply(from = "${rootProject.projectDir}/scripts/publish-module.gradle")
 
-apply(from = "${rootProject.projectDir}/scripts/publish-module.gradle")
+//publish to jitpack (local test)
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                from(components["release"])
+
+                groupId = "com.github.Zz-m"
+                artifactId = "android-bluetooth-scan-activity"
+                version = "0.0.4"
+            }
+        }
+    }
+}
