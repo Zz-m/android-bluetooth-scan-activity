@@ -1,323 +1,367 @@
-package cn.denghanxi.android_bluetooth_scan.lib;
+package cn.denghanxi.android_bluetooth_scan.lib
 
-import android.Manifest;
-import android.app.Activity;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothManager;
-import android.bluetooth.le.BluetoothLeScanner;
-import android.bluetooth.le.ScanCallback;
-import android.bluetooth.le.ScanResult;
-import android.content.Context;
-import android.content.Intent;
-import android.graphics.Color;
-import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.provider.Settings;
-import android.text.TextUtils;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Toast;
-
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AlertDialog;
-import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.DividerItemDecoration;
-import androidx.recyclerview.widget.LinearLayoutManager;
-
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import cn.denghanxi.android_bluetooth_scan.lib.databinding.FragmentBluetoothScanBinding;
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
-import io.reactivex.rxjava3.disposables.CompositeDisposable;
+import android.Manifest
+import android.app.Activity
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanResult
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
+import android.graphics.Color
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.text.TextUtils
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultCallback
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener
+import cn.denghanxi.android_bluetooth_scan.lib.BleUtil.checkBlePermission
+import cn.denghanxi.android_bluetooth_scan.lib.databinding.FragmentBluetoothScanBinding
+import kotlinx.coroutines.launch
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * A simple {@link Fragment} subclass.
- * Use the {@link BluetoothScanFragment#newInstance} factory method to
+ * A simple [Fragment] subclass.
+ * Use the [BluetoothScanFragment.newInstance] factory method to
  * create an instance of this fragment.
  */
-public class BluetoothScanFragment extends Fragment {
+class BluetoothScanFragment : Fragment() {
+    private val logger: Logger = LoggerFactory.getLogger(BluetoothScanFragment::class.java)
+    private val viewModel: BluetoothScanViewModel by activityViewModels()
 
-    private final Logger logger = LoggerFactory.getLogger(BluetoothScanFragment.class);
-    private final CompositeDisposable disposables = new CompositeDisposable();
+    private lateinit var binding: FragmentBluetoothScanBinding
 
-    private FragmentBluetoothScanBinding binding;
-    private BluetoothScanViewModel viewModel;
+    private lateinit var bluetoothDeviceEnableLauncher: ActivityResultLauncher<Intent>
+    private lateinit var blePermissionRequestLauncher: ActivityResultLauncher<Array<String>>
+    private var bluetoothAdapter: BluetoothAdapter? = null
 
-    private ActivityResultLauncher<Intent> bluetoothDeviceEnableLauncher;
-    private ActivityResultLauncher<String[]> blePermissionRequestLauncher;
-    private BluetoothAdapter bluetoothAdapter;
-
-    // Stops scanning after 10 seconds.
-    private static final long SCAN_PERIOD = 10000;
-    private final Handler handler = new Handler(Looper.getMainLooper());
+    private val handler = Handler(Looper.getMainLooper())
 
     // list
-    private final List<BluetoothDevice> bluetoothDeviceList = new ArrayList<>();
-    private final DeviceListAdapter recyclerViewAdapter = new DeviceListAdapter(bluetoothDeviceList);
+    private val bluetoothDeviceList: MutableList<BluetoothDevice> = ArrayList<BluetoothDevice>()
+    private val recyclerViewAdapter = DeviceListAdapter(bluetoothDeviceList)
 
-    public BluetoothScanFragment() {
-        // Required empty public constructor
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        bluetoothDeviceEnableLauncher = registerForActivityResult<Intent, ActivityResult>(
+            ActivityResultContracts.StartActivityForResult(),
+            enableDeviceCallback
+        )
+        blePermissionRequestLauncher =
+            registerForActivityResult(
+                ActivityResultContracts.RequestMultiplePermissions(),
+                requestPermissionsCallback
+            )
+
+        setupViewModel()
     }
 
-    public static BluetoothScanFragment newInstance() {
-        BluetoothScanFragment fragment = new BluetoothScanFragment();
-        Bundle args = new Bundle();
-        fragment.setArguments(args);
-        return fragment;
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        viewModel = new ViewModelProvider(requireActivity()).get(BluetoothScanViewModel.class);
-        bluetoothDeviceEnableLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), enableDeviceCallback);
-        blePermissionRequestLauncher = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), requestPermissionsCallback);
-    }
-
-    @Override
-    public View onCreateView(@NotNull LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
         // Inflate the layout for this fragment
-        binding = FragmentBluetoothScanBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        binding = FragmentBluetoothScanBinding.inflate(inflater, container, false)
+        return binding.getRoot()
     }
 
-    @Override
-    public void onViewCreated(@NonNull @NotNull View view, @Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        setupView();
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupView()
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        setupObserver();
-        makeBluetoothAvailable();
+    override fun onStart() {
+        super.onStart()
+        makeBluetoothAvailable()
     }
 
-    @Override
-    public void onStop() {
-        super.onStop();
-        disposables.clear();
-    }
-
-
-    private void setupView() {
+    private fun setupView() {
         // list
-        LinearLayoutManager layoutManager = new LinearLayoutManager(requireContext());
-        binding.recyclerView.setLayoutManager(layoutManager);
-        binding.recyclerView.setAdapter(recyclerViewAdapter);
-        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(binding.recyclerView.getContext(), layoutManager.getOrientation());
-        binding.recyclerView.addItemDecoration(dividerItemDecoration);
+        val layoutManager = LinearLayoutManager(requireContext())
+        binding.recyclerView.setLayoutManager(layoutManager)
+        binding.recyclerView.setAdapter(recyclerViewAdapter)
+        val dividerItemDecoration = DividerItemDecoration(
+            binding.recyclerView.context,
+            layoutManager.orientation
+        )
+        binding.recyclerView.addItemDecoration(dividerItemDecoration)
         // swipe refresh
-        binding.layoutRefresh.setColorSchemeColors(Color.CYAN, Color.DKGRAY, Color.YELLOW);
-        binding.layoutRefresh.setOnRefreshListener(() -> viewModel.refreshRequest.onNext(true));
+        binding.layoutRefresh.setColorSchemeColors(Color.CYAN, Color.DKGRAY, Color.YELLOW)
+        binding.layoutRefresh.setOnRefreshListener(OnRefreshListener {
+
+            logger.error("layoutRefresh request viewmodel refresh")
+            lifecycleScope.launch {
+                viewModel.requestRefresh()
+            }
+        })
     }
 
-    void setupObserver() {
-        disposables.add(recyclerViewAdapter.getPositionClicks()
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(device -> {
-                    Intent data = new Intent();
-                    data.putExtra(BluetoothScanActivity.EXTRA_DEVICE, device);
-                    requireActivity().setResult(Activity.RESULT_OK, data);
-                    //stop scan
-                    if (BleUtil.checkBlePermission(this.requireContext())) {
-                        BluetoothLeScanner scanner = bluetoothAdapter.getBluetoothLeScanner();
-                        scanner.stopScan(leScanCallback);
+    fun setupViewModel() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                //loading ui
+                launch {
+                    viewModel.isScanFlow.collect { isScan ->
+                        logger.error("isScan:{}", isScan)
+                        binding.progressBar.visibility = if (isScan) View.VISIBLE else View.GONE
+                        binding.layoutRefresh.isRefreshing = isScan
                     }
-                    viewModel.loadingStatus.onNext(false);
-                    //finish activity
-                    requireActivity().finish();
-                }, e -> logger.error("点击事件异常:", e)));
-        disposables.add(viewModel.loadingStatus
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(isLoading -> {
-                    binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-                    binding.layoutRefresh.setRefreshing(isLoading);
-                }, e -> logger.error("err:", e)));
-        disposables.add(viewModel.refreshManager
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(b -> {
-                    if (b) {
-                        logger.debug("开始刷新蓝牙");
-                        startScanDevice();
-                    } else {
-                        logger.debug("正在刷新蓝牙，无需再次刷新。");
+                }
+                //handle refresh request
+                launch {
+                    viewModel.startScanFlow.collect { startScan ->
+                        logger.error("startScan:{}", startScan)
+                        if (startScan) {
+                            logger.debug("Should start scan bluetooth device...")
+                            startScanDevice()
+                        } else {
+                            logger.debug("Already scanning, not restart")
+                        }
                     }
-                }, e -> logger.error("err:", e)));
-    }
+                }
+                //Device selected
+                launch {
+                    recyclerViewAdapter.onDeviceSelectedFlow.collect { device ->
+                        val data = Intent()
+                        data.putExtra(BluetoothScanActivity.EXTRA_DEVICE, device)
+                        requireActivity().setResult(Activity.RESULT_OK, data)
 
-    private void makeBluetoothAvailable() {
-        final BluetoothManager bluetoothManager = (BluetoothManager) requireActivity().getSystemService(Context.BLUETOOTH_SERVICE);
-        bluetoothAdapter = bluetoothManager.getAdapter();
-        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            bluetoothDeviceEnableLauncher.launch(enableBtIntent);
-        } else {
-            checkPermissionAndStartScan();
+                        //stop scan
+                        context?.let {
+                            if (checkBlePermission(it)) {
+                                bluetoothAdapter?.getBluetoothLeScanner()?.apply {
+                                    stopScan(leScanCallback)
+                                }
+                            }
+                        }
+                        viewModel.setIsScan(false)
+
+                        //finish activity
+                        requireActivity().finish()
+                    }
+                }
+            }
         }
     }
 
-    private void checkPermissionAndStartScan() {
-        if (BleUtil.checkBlePermission(requireContext())) {
-            startScanDevice();
-        } else {
-            String message;
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                message = "扫描附近蓝牙设备需要定位权限";
+    private fun makeBluetoothAvailable() {
+        val bluetoothManager =
+            requireActivity().getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothAdapter = bluetoothManager.adapter
+        bluetoothAdapter?.let { adapter ->
+            if (!adapter.isEnabled) {
+                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                bluetoothDeviceEnableLauncher.launch(enableBtIntent)
             } else {
-                message = "扫描附近蓝牙设备需要蓝牙与定位权限";
+                checkPermissionAndStartScan()
             }
-            new AlertDialog.Builder(requireContext())
-                    .setMessage(message)
-                    .setPositiveButton("好", (dialog, which) -> blePermissionRequestLauncher.launch(BleUtil.blePermissions))
-                    .setNegativeButton("取消", ((dialog, which) -> requireActivity().finish()))
-                    .setCancelable(false)
-                    .show();
         }
     }
 
-    private void startScanDevice() {
-        if (!BleUtil.checkBlePermission(this.requireContext())) {
-            Toast.makeText(requireContext(), "需要蓝牙与定位权限以扫描周围设备...", Toast.LENGTH_SHORT).show();
-            return;
+    private fun checkPermissionAndStartScan() {
+        if (checkBlePermission(requireContext())) {
+            startScanDevice()
+        } else {
+            val message = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                "扫描附近蓝牙设备需要定位权限"
+            } else {
+                "扫描附近蓝牙设备需要蓝牙与定位权限"
+            }
+            AlertDialog.Builder(requireContext())
+                .setMessage(message)
+                .setPositiveButton(
+                    "好",
+                    DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int ->
+                        blePermissionRequestLauncher.launch(BleUtil.blePermissions)
+                    })
+                .setNegativeButton(
+                    "取消",
+                    (DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int -> requireActivity().finish() })
+                )
+                .setCancelable(false)
+                .show()
         }
-        BluetoothLeScanner scanner = bluetoothAdapter.getBluetoothLeScanner();
+    }
+
+    private fun startScanDevice() {
+        if (!checkBlePermission(this.requireContext())) {
+            Toast.makeText(
+                requireContext(),
+                "需要蓝牙与定位权限以扫描周围设备...",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        val scanner = bluetoothAdapter?.getBluetoothLeScanner()
+        if (scanner == null) {
+            logger.warn("scanner is null")
+            return
+        }
         // Stops scanning after a pre-defined scan period.
-        handler.postDelayed(() -> {
-            logger.debug("stop scan bluetooth device...");
-            scanner.stopScan(leScanCallback);
-            viewModel.loadingStatus.onNext(false);
-        }, SCAN_PERIOD);
-        logger.debug("start scan bluetooth device...");
-        viewModel.loadingStatus.onNext(true);
-        scanner.startScan(leScanCallback);
+        handler.postDelayed(Runnable {
+            logger.debug("stop scan bluetooth device...")
+            scanner.stopScan(leScanCallback)
+            lifecycleScope.launch {
+                viewModel.setIsScan(false)
+            }
+        }, SCAN_PERIOD)
+        logger.debug("start scan bluetooth device...")
+        lifecycleScope.launch {
+            viewModel.setIsScan(true)
+            scanner.startScan(leScanCallback)
+        }
     }
 
-    private final ScanCallback leScanCallback = new ScanCallback() {
+    private val leScanCallback: ScanCallback = object : ScanCallback() {
         @RequiresApi(api = Build.VERSION_CODES.S)
-        @Override
-        public void onScanResult(int callbackType, ScanResult result) {
-            super.onScanResult(callbackType, result);
-            Context context = getContext();
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            super.onScanResult(callbackType, result)
+            val context = getContext()
             if (context == null) {
-                logger.warn("onScanResult, but context is finalized.");
-                return;
+                logger.warn("onScanResult, but context is finalized.")
+                return
             }
-            BleUtil.checkBlePermission(context);
-            BluetoothDevice device = result.getDevice();
-            logger.debug("-------------------------");
-            logger.debug("name:{}", device.getName());
-            logger.debug("address:{}", device.getAddress());
-            logger.debug("bond:{}", device.getBondState());
+            checkBlePermission(context)
+            val device = result.device
+            logger.debug("-------------------------")
+            logger.debug("name:{}", device.getName())
+            logger.debug("address:{}", device.getAddress())
+            logger.debug("bond:{}", device.getBondState())
 
-            boolean addFlag = true;
-            for (BluetoothDevice savedDevice : bluetoothDeviceList) {
-                if (savedDevice.getAddress().equals(device.getAddress())) {
-                    addFlag = false;
-                    break;
+            var addFlag = true
+            for (savedDevice in bluetoothDeviceList) {
+                if (savedDevice.getAddress() == device.getAddress()) {
+                    addFlag = false
+                    break
                 }
             }
             if (addFlag && !TextUtils.isEmpty(device.getName())) {
-                bluetoothDeviceList.add(device);
-                recyclerViewAdapter.notifyItemChanged(bluetoothDeviceList.size() - 1);
+                bluetoothDeviceList.add(device)
+                recyclerViewAdapter.notifyItemInserted(bluetoothDeviceList.size - 1)
             }
         }
 
-        @Override
-        public void onBatchScanResults(List<ScanResult> results) {
-            super.onBatchScanResults(results);
+        override fun onBatchScanResults(results: MutableList<ScanResult>) {
+            super.onBatchScanResults(results)
         }
 
-        @Override
-        public void onScanFailed(int errorCode) {
-            super.onScanFailed(errorCode);
-            logger.error("scan failed code:{}", errorCode);
+        override fun onScanFailed(errorCode: Int) {
+            super.onScanFailed(errorCode)
+            logger.error("scan failed code:{}", errorCode)
         }
-    };
+    }
 
-    private final ActivityResultCallback<ActivityResult> enableDeviceCallback = result -> {
-        if (result.getResultCode() == Activity.RESULT_OK) {
-            logger.debug("打开蓝牙设备成功");
-            final BluetoothManager bluetoothManager = (BluetoothManager) requireActivity().getSystemService(Context.BLUETOOTH_SERVICE);
-            bluetoothAdapter = bluetoothManager.getAdapter();
-            if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
-                logger.error("重新获取bluetoothAdapter，任然异常");
-                Toast.makeText(requireContext(), "打开蓝牙设备失败", Toast.LENGTH_SHORT).show();
-                requireActivity().finish();
-            } else {
-                checkPermissionAndStartScan();
-            }
-        } else {
-            Toast.makeText(requireContext(), "打开设备蓝牙失败", Toast.LENGTH_SHORT).show();
-            requireActivity().finish();
-        }
-    };
-
-    private final ActivityResultCallback<Map<String, Boolean>> requestPermissionsCallback = resultMap -> {
-        AtomicBoolean success = new AtomicBoolean(true);
-        Set<String> deniedSet = new HashSet<>();
-        resultMap.forEach((key, value) -> {
-            logger.debug("Permission:{}, Granted = {}", key, value);
-            if (!value) {
-                success.set(false);
-                deniedSet.add(key);
-            }
-        });
-        if (!success.get()) {
-            boolean neverAskAgain = false;
-            Set<String> neverAskSet = new HashSet<>();
-            for (String permission : deniedSet) {
-                if (!shouldShowRequestPermissionRationale(permission)) {
-                    neverAskSet.add(permission);
-                    neverAskAgain = true;
-                }
-            }
-            if (neverAskAgain) {
-                String message;
-                if (neverAskSet.contains(Manifest.permission.BLUETOOTH_SCAN) || neverAskSet.contains(Manifest.permission.BLUETOOTH_CONNECT)) {
-                    message = "缺少权限，请在设置中允许蓝牙及连接附近设备权限";
+    private val enableDeviceCallback = ActivityResultCallback { result: ActivityResult ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            logger.debug("打开蓝牙设备成功")
+            val bluetoothManager =
+                requireActivity().getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            bluetoothAdapter = bluetoothManager.adapter
+            bluetoothAdapter?.let {
+                if (it.isEnabled) {
+                    checkPermissionAndStartScan()
                 } else {
-                    message = "扫描蓝牙设备需要位置权限，请在设置中开启位置权限";
+                    logger.error("重新获取bluetoothAdapter，任然异常")
+                    Toast.makeText(requireContext(), "打开蓝牙设备失败", Toast.LENGTH_SHORT).show()
+                    requireActivity().finish()
                 }
-                new AlertDialog.Builder(requireContext())
-                        .setMessage(message)
-                        .setPositiveButton("去设置", ((dialog, which) -> {
-                            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                            Uri uri = Uri.fromParts("package", requireContext().getPackageName(), null);
-                            intent.setData(uri);
-                            startActivity(intent);
-                        }))
-                        .setNegativeButton("放弃", ((dialog, which) -> requireActivity().finish()))
-                        .setCancelable(false)
-                        .show();
-            } else {
-                checkPermissionAndStartScan();
+            } ?: {
+                Toast.makeText(requireContext(), "手机不支持蓝牙适配器", Toast.LENGTH_SHORT).show()
             }
         } else {
-            checkPermissionAndStartScan();
+            Toast.makeText(requireContext(), "打开设备蓝牙失败", Toast.LENGTH_SHORT).show()
+            requireActivity().finish()
         }
-    };
+    }
+
+    private val requestPermissionsCallback =
+        ActivityResultCallback { resultMap: Map<String, Boolean> ->
+            val success = AtomicBoolean(true)
+            val deniedSet: MutableSet<String> = HashSet<String>()
+            resultMap.forEach { (key: String?, value: Boolean?) ->
+                logger.debug("Permission:{}, Granted = {}", key, value)
+                if (!value!!) {
+                    success.set(false)
+                    deniedSet.add(key!!)
+                }
+            }
+            if (!success.get()) {
+                var neverAskAgain = false
+                val neverAskSet: MutableSet<String?> = HashSet<String?>()
+                for (permission in deniedSet) {
+                    if (!shouldShowRequestPermissionRationale(permission)) {
+                        neverAskSet.add(permission)
+                        neverAskAgain = true
+                    }
+                }
+                if (neverAskAgain) {
+                    val message: String?
+                    if (neverAskSet.contains(Manifest.permission.BLUETOOTH_SCAN) || neverAskSet.contains(
+                            Manifest.permission.BLUETOOTH_CONNECT
+                        )
+                    ) {
+                        message = "缺少权限，请在设置中允许蓝牙及连接附近设备权限"
+                    } else {
+                        message = "扫描蓝牙设备需要位置权限，请在设置中开启位置权限"
+                    }
+                    AlertDialog.Builder(requireContext())
+                        .setMessage(message)
+                        .setPositiveButton(
+                            "去设置",
+                            (DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int ->
+                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                val uri = Uri.fromParts(
+                                    "package",
+                                    requireContext().packageName,
+                                    null
+                                )
+                                intent.setData(uri)
+                                startActivity(intent)
+                            })
+                        )
+                        .setNegativeButton(
+                            "放弃",
+                            (DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int -> requireActivity().finish() })
+                        )
+                        .setCancelable(false)
+                        .show()
+                } else {
+                    checkPermissionAndStartScan()
+                }
+            } else {
+                checkPermissionAndStartScan()
+            }
+        }
+
+    companion object {
+        // Stops scanning after 10 seconds.
+        private const val SCAN_PERIOD: Long = 10000
+        fun newInstance(): BluetoothScanFragment {
+            val fragment = BluetoothScanFragment()
+            return fragment
+        }
+    }
 }

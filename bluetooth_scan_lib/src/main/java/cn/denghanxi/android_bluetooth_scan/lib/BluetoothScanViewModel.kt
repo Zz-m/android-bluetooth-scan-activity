@@ -1,24 +1,38 @@
-package cn.denghanxi.android_bluetooth_scan.lib;
+package cn.denghanxi.android_bluetooth_scan.lib
 
-import androidx.lifecycle.ViewModel;
-
-import io.reactivex.rxjava3.core.Observable;
-import io.reactivex.rxjava3.subjects.BehaviorSubject;
-import io.reactivex.rxjava3.subjects.PublishSubject;
+import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
+import org.slf4j.LoggerFactory
 
 /**
  * Created by dhx on 2021/7/14.
  */
-public class BluetoothScanViewModel extends ViewModel {
+internal class BluetoothScanViewModel : ViewModel() {
+
+    private val logger = LoggerFactory.getLogger(BluetoothScanViewModel::class.java)
 
     // in
-    BehaviorSubject<Boolean> loadingStatus = BehaviorSubject.createDefault(false);
-    PublishSubject<Boolean> refreshRequest = PublishSubject.create();
+    private val _refreshRequestFlow = MutableSharedFlow<Boolean>()
+    private val _isScanFlow = MutableStateFlow<Boolean>(false)
 
-    // out
-    Observable<Boolean> refreshManager = refreshRequest.withLatestFrom(loadingStatus, (b1, b2) -> b1 && !b2);
+    val isScanFlow: Flow<Boolean> = _isScanFlow
 
-    public BluetoothScanViewModel() {
+    val startScanFlow: Flow<Boolean> = _refreshRequestFlow.map {
+        !_isScanFlow.value
+    }
+
+    suspend fun requestRefresh() {
+        logger.error("requestRefresh()")
+        val r = _refreshRequestFlow.emit(true)
+        logger.error("request result:{}", r)
+    }
+
+    suspend fun setIsScan(isScan: Boolean) {
+        logger.error("setIsScan({})", isScan)
+        _isScanFlow.emit(isScan)
     }
 
 }

@@ -1,76 +1,69 @@
-package cn.denghanxi.android_bluetooth_scan.lib;
+package cn.denghanxi.android_bluetooth_scan.lib
 
-import android.annotation.SuppressLint;
-import android.bluetooth.BluetoothDevice;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
-
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
-
-import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
-
-import io.reactivex.rxjava3.core.Observable;
-import io.reactivex.rxjava3.subjects.PublishSubject;
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 
 /**
  * Created by dhx on 2021/7/14.
  */
-class DeviceListAdapter extends RecyclerView.Adapter<DeviceListAdapter.ViewHolder> {
+internal class DeviceListAdapter(private val deviceList: MutableList<BluetoothDevice>) :
+    RecyclerView.Adapter<DeviceListAdapter.ViewHolder>() {
+    private var myScope = MainScope()
+    private val onClickFlow = MutableSharedFlow<BluetoothDevice>()
 
-    private final PublishSubject<BluetoothDevice> onClickSubject = PublishSubject.create();
+    val onDeviceSelectedFlow: Flow<BluetoothDevice> = onClickFlow
 
-    private final List<BluetoothDevice> deviceList;
-
-    public DeviceListAdapter(List<BluetoothDevice> deviceList) {
-        this.deviceList = deviceList;
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val v = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_ble_device, parent, false)
+        return ViewHolder(v)
     }
 
-    @NonNull
-    @NotNull
-    @Override
-    public ViewHolder onCreateViewHolder(@NonNull @NotNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_ble_device, parent, false);
-        return new ViewHolder(v);
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val device = deviceList[position]
+        holder.updateView(device)
+        holder.itemView.setOnClickListener(View.OnClickListener { v: View? ->
+            myScope.launch {
+                onClickFlow.emit(device)
+            }
+        })
     }
 
-    @Override
-    public void onBindViewHolder(@NonNull @NotNull ViewHolder holder, int position) {
-        BluetoothDevice device = deviceList.get(position);
-        holder.updateView(device);
-        holder.itemView.setOnClickListener(v -> onClickSubject.onNext(device));
+
+    override fun getItemCount(): Int {
+        return deviceList.size
     }
 
-    @Override
-    public int getItemCount() {
-        return deviceList.size();
+
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        myScope.cancel()
+    }
 
-        private final TextView deviceName;
-        private final TextView deviceAddress;
-
-        public ViewHolder(@NonNull @NotNull View itemView) {
-            super(itemView);
-            deviceName = itemView.findViewById(R.id.tv_device_name);
-            deviceAddress = itemView.findViewById(R.id.tv_device_address);
-        }
+    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val deviceName: TextView = itemView.findViewById<TextView>(R.id.tv_device_name)
+        private val deviceAddress: TextView =
+            itemView.findViewById<TextView>(R.id.tv_device_address)
 
         @SuppressLint("MissingPermission")
-        void updateView(BluetoothDevice device) {
-            deviceName.setText(device.getName());
-            deviceAddress.setText(device.getAddress());
+        fun updateView(device: BluetoothDevice) {
+            deviceName.text = device.getName()
+            deviceAddress.text = device.getAddress()
         }
     }
-
-    public Observable<BluetoothDevice> getPositionClicks() {
-        return onClickSubject;
-    }
-
 
 }
