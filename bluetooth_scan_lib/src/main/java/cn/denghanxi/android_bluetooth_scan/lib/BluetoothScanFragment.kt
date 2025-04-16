@@ -112,7 +112,6 @@ class BluetoothScanFragment : Fragment() {
         binding.layoutRefresh.setColorSchemeColors(Color.CYAN, Color.DKGRAY, Color.YELLOW)
         binding.layoutRefresh.setOnRefreshListener(OnRefreshListener {
 
-            logger.error("layoutRefresh request viewmodel refresh")
             lifecycleScope.launch {
                 viewModel.requestRefresh()
             }
@@ -125,7 +124,6 @@ class BluetoothScanFragment : Fragment() {
                 //loading ui
                 launch {
                     viewModel.isScanFlow.collect { isScan ->
-                        logger.error("isScan:{}", isScan)
                         binding.progressBar.visibility = if (isScan) View.VISIBLE else View.GONE
                         binding.layoutRefresh.isRefreshing = isScan
                     }
@@ -133,7 +131,6 @@ class BluetoothScanFragment : Fragment() {
                 //handle refresh request
                 launch {
                     viewModel.startScanFlow.collect { startScan ->
-                        logger.error("startScan:{}", startScan)
                         if (startScan) {
                             logger.debug("Should start scan bluetooth device...")
                             startScanDevice()
@@ -270,7 +267,7 @@ class BluetoothScanFragment : Fragment() {
 
         override fun onScanFailed(errorCode: Int) {
             super.onScanFailed(errorCode)
-            logger.error("scan failed code:{}", errorCode)
+            logger.warn("scan failed code:{}", errorCode)
         }
     }
 
@@ -318,14 +315,13 @@ class BluetoothScanFragment : Fragment() {
                     }
                 }
                 if (neverAskAgain) {
-                    val message: String?
-                    if (neverAskSet.contains(Manifest.permission.BLUETOOTH_SCAN) || neverAskSet.contains(
+                    val message = if (neverAskSet.contains(Manifest.permission.BLUETOOTH_SCAN) || neverAskSet.contains(
                             Manifest.permission.BLUETOOTH_CONNECT
                         )
                     ) {
-                        message = "缺少权限，请在设置中允许蓝牙及连接附近设备权限"
+                        "缺少权限，请在设置中允许蓝牙及连接附近设备权限"
                     } else {
-                        message = "扫描蓝牙设备需要位置权限，请在设置中开启位置权限"
+                        "扫描蓝牙设备需要位置权限，请在设置中开启位置权限"
                     }
                     AlertDialog.Builder(requireContext())
                         .setMessage(message)
