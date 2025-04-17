@@ -56,7 +56,7 @@ class BluetoothScanFragment : Fragment() {
 
     private lateinit var bluetoothDeviceEnableLauncher: ActivityResultLauncher<Intent>
     private lateinit var blePermissionRequestLauncher: ActivityResultLauncher<Array<String>>
-    private var bluetoothAdapter: BluetoothAdapter? = null
+    private lateinit var bluetoothAdapter: BluetoothAdapter
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -76,6 +76,9 @@ class BluetoothScanFragment : Fragment() {
                 requestPermissionsCallback
             )
 
+        val bluetoothManager =
+            requireActivity().getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothAdapter = bluetoothManager.adapter
         setupViewModel()
     }
 
@@ -96,6 +99,11 @@ class BluetoothScanFragment : Fragment() {
     override fun onStart() {
         super.onStart()
         makeBluetoothAvailable()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        stopScanDevice()
     }
 
     private fun setupView() {
@@ -149,7 +157,7 @@ class BluetoothScanFragment : Fragment() {
                         //stop scan
                         context?.let {
                             if (checkBlePermission(it)) {
-                                bluetoothAdapter?.getBluetoothLeScanner()?.apply {
+                                bluetoothAdapter.bluetoothLeScanner?.apply {
                                     stopScan(leScanCallback)
                                 }
                             }
@@ -165,16 +173,11 @@ class BluetoothScanFragment : Fragment() {
     }
 
     private fun makeBluetoothAvailable() {
-        val bluetoothManager =
-            requireActivity().getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter = bluetoothManager.adapter
-        bluetoothAdapter?.let { adapter ->
-            if (!adapter.isEnabled) {
-                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-                bluetoothDeviceEnableLauncher.launch(enableBtIntent)
-            } else {
-                checkPermissionAndStartScan()
-            }
+        if (!bluetoothAdapter.isEnabled) {
+            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            bluetoothDeviceEnableLauncher.launch(enableBtIntent)
+        } else {
+            checkPermissionAndStartScan()
         }
     }
 
@@ -212,7 +215,7 @@ class BluetoothScanFragment : Fragment() {
             ).show()
             return
         }
-        val scanner = bluetoothAdapter?.getBluetoothLeScanner()
+        val scanner = bluetoothAdapter.getBluetoothLeScanner()
         if (scanner == null) {
             logger.warn("scanner is null")
             return
@@ -220,15 +223,24 @@ class BluetoothScanFragment : Fragment() {
         // Stops scanning after a pre-defined scan period.
         handler.postDelayed(Runnable {
             logger.debug("stop scan bluetooth device...")
-            scanner.stopScan(leScanCallback)
-            lifecycleScope.launch {
-                viewModel.setIsScan(false)
-            }
+            stopScanDevice()
         }, SCAN_PERIOD)
         logger.debug("start scan bluetooth device...")
         lifecycleScope.launch {
             viewModel.setIsScan(true)
             scanner.startScan(leScanCallback)
+        }
+    }
+
+    private fun stopScanDevice() {
+        context?.let { context ->
+            val scanner = bluetoothAdapter.bluetoothLeScanner
+            if (checkBlePermission(context)) {
+                scanner?.stopScan(leScanCallback)
+                lifecycleScope.launch {
+                    viewModel.setIsScan(false)
+                }
+            }
         }
     }
 
@@ -277,7 +289,7 @@ class BluetoothScanFragment : Fragment() {
             val bluetoothManager =
                 requireActivity().getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
             bluetoothAdapter = bluetoothManager.adapter
-            bluetoothAdapter?.let {
+            bluetoothAdapter.let {
                 if (it.isEnabled) {
                     checkPermissionAndStartScan()
                 } else {
@@ -285,8 +297,6 @@ class BluetoothScanFragment : Fragment() {
                     Toast.makeText(requireContext(), "打开蓝牙设备失败", Toast.LENGTH_SHORT).show()
                     requireActivity().finish()
                 }
-            } ?: {
-                Toast.makeText(requireContext(), "手机不支持蓝牙适配器", Toast.LENGTH_SHORT).show()
             }
         } else {
             Toast.makeText(requireContext(), "打开设备蓝牙失败", Toast.LENGTH_SHORT).show()
@@ -315,14 +325,15 @@ class BluetoothScanFragment : Fragment() {
                     }
                 }
                 if (neverAskAgain) {
-                    val message = if (neverAskSet.contains(Manifest.permission.BLUETOOTH_SCAN) || neverAskSet.contains(
-                            Manifest.permission.BLUETOOTH_CONNECT
-                        )
-                    ) {
-                        "缺少权限，请在设置中允许蓝牙及连接附近设备权限"
-                    } else {
-                        "扫描蓝牙设备需要位置权限，请在设置中开启位置权限"
-                    }
+                    val message =
+                        if (neverAskSet.contains(Manifest.permission.BLUETOOTH_SCAN) || neverAskSet.contains(
+                                Manifest.permission.BLUETOOTH_CONNECT
+                            )
+                        ) {
+                            "缺少权限，请在设置中允许蓝牙及连接附近设备权限"
+                        } else {
+                            "扫描蓝牙设备需要位置权限，请在设置中开启位置权限"
+                        }
                     AlertDialog.Builder(requireContext())
                         .setMessage(message)
                         .setPositiveButton(

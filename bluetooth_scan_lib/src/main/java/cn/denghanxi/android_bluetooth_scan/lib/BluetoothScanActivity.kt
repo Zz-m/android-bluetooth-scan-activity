@@ -1,9 +1,14 @@
 package cn.denghanxi.android_bluetooth_scan.lib
 
+import android.app.Activity
+import android.bluetooth.BluetoothDevice
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup.MarginLayoutParams
 import android.widget.FrameLayout
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.OnApplyWindowInsetsListener
 import androidx.core.view.ViewCompat
@@ -43,8 +48,29 @@ class BluetoothScanActivity : AppCompatActivity() {
 
     companion object {
         /**
-         * 获取蓝牙ble设备
+         * Extra for the selected device
          */
         const val EXTRA_DEVICE: String = "extra_device"
     }
+}
+
+class BluetoothDevicePickContract: ActivityResultContract<Unit, BluetoothDevice?>() {
+    override fun createIntent(
+        context: Context,
+        input: Unit
+    ): Intent {
+        return Intent(context, BluetoothScanActivity::class.java)
+    }
+
+    override fun parseResult(
+        resultCode: Int,
+        intent: Intent?
+    ): BluetoothDevice? {
+        return if (resultCode != Activity.RESULT_OK) {
+            null
+        } else {
+            intent?.getParcelableExtra(BluetoothScanActivity.EXTRA_DEVICE)
+        }
+    }
+
 }

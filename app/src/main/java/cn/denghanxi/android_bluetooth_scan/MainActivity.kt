@@ -1,69 +1,43 @@
 package cn.denghanxi.android_bluetooth_scan
 
-import android.app.Activity
-import android.bluetooth.BluetoothDevice
-import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import cn.denghanxi.android_bluetooth_scan.databinding.ActivityMainBinding
-import cn.denghanxi.android_bluetooth_scan.lib.BluetoothScanActivity
+import cn.denghanxi.android_bluetooth_scan.lib.BluetoothDevicePickContract
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
 
-    private lateinit var bluetoothScanLauncher: ActivityResultLauncher<Intent>
+    private lateinit var bluetoothScanLauncher: ActivityResultLauncher<Unit>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        bluetoothScanLauncher = registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) { result: ActivityResult ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                if (result.data != null) {
-                    val device =
-                        result.data!!.getParcelableExtra<BluetoothDevice>(
-                            BluetoothScanActivity.EXTRA_DEVICE
-                        )
-                    if (device != null) {
-                        val address = device.address
-                        Log.d(TAG, "获取address: $address")
-                    } else {
-                        Log.e(TAG, "返回device null！")
-                    }
+        bluetoothScanLauncher =
+            registerForActivityResult(BluetoothDevicePickContract()) { bluetoothDevice ->
+                val device = bluetoothDevice
+                if (device == null) {
+                    Toast.makeText(this, R.string.fail_to_pick_device, Toast.LENGTH_SHORT).show()
+                } else {
+                    binding.tvMain.text =
+                        String.format(getString(R.string.picked_device), device.address)
                 }
-            } else {
-                Toast.makeText(
-                    this,
-                    "获取蓝牙设备失败",
-                    Toast.LENGTH_SHORT
-                ).show()
             }
-        }
 
         setupView()
     }
 
     private fun setupView() {
         binding.btnMain.setOnClickListener { v: View? ->
-            val intent = Intent(
-                this,
-                BluetoothScanActivity::class.java
-            )
-            bluetoothScanLauncher.launch(intent)
+
+            bluetoothScanLauncher.launch(Unit)
         }
     }
 
-    companion object {
-        private val TAG: String = MainActivity::class.java.name
-    }
 }
