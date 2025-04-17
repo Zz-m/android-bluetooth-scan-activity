@@ -12,7 +12,7 @@
 * ### 2 Import this lib in your module
 
 ```
-implementation 'com.github.Zz-m:android-bluetooth-scan-activity:{The latest version}'
+implementation 'com.github.Zz-m:android-bluetooth-scan-activity:v0.0.5'
 ```
 
 * ### 3 Register scan launcher in your activity or fragment
