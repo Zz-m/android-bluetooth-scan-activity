@@ -1,1 +1,12 @@
-<resources></resources>
+<resources>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="settings">Settings</string>
+    <string name="scan_request_permission_location">Scan BLE device nearby need location permission</string>
+    <string name="scan_request_permission_bluetooth_and_location">Scan BLE device nearby need bluetooth and location permissions</string>
+    <string name="permission_rationale_bluetooth_scan_and_connect">We need bluetooth scan and connect permissions to scan BLE device nearby</string>
+    <string name="permission_rationale_location">We need bluetooth location permission to scan BLE device nearby</string>
+
+    <string name="warning_bluetooth_scan_permission_required">We need bluetooth and location permissions to scan BLE device nearby</string>
+    <string name="warning_fail_to_enable_bluetooth_adapter">Fail to enable bluetooth adapter</string>
+</resources>
