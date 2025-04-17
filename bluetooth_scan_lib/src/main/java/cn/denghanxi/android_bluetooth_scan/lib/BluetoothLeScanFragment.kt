@@ -37,7 +37,7 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener
 import cn.denghanxi.android_bluetooth_scan.lib.BleUtil.checkBlePermission
-import cn.denghanxi.android_bluetooth_scan.lib.databinding.FragmentBluetoothScanBinding
+import cn.denghanxi.android_bluetooth_scan.lib.databinding.FragmentBluetoothLeScanBinding
 import kotlinx.coroutines.launch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -45,14 +45,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * A simple [Fragment] subclass.
- * Use the [BluetoothScanFragment.newInstance] factory method to
+ * Use the [BluetoothLeScanFragment.newInstance] factory method to
  * create an instance of this fragment.
  */
-class BluetoothScanFragment : Fragment() {
-    private val logger: Logger = LoggerFactory.getLogger(BluetoothScanFragment::class.java)
-    private val viewModel: BluetoothScanViewModel by activityViewModels()
+class BluetoothLeScanFragment : Fragment() {
+    private val logger: Logger = LoggerFactory.getLogger(BluetoothLeScanFragment::class.java)
+    private val viewModel: BluetoothLeScanViewModel by activityViewModels()
 
-    private lateinit var binding: FragmentBluetoothScanBinding
+    private lateinit var binding: FragmentBluetoothLeScanBinding
 
     private lateinit var bluetoothDeviceEnableLauncher: ActivityResultLauncher<Intent>
     private lateinit var blePermissionRequestLauncher: ActivityResultLauncher<Array<String>>
@@ -87,7 +87,7 @@ class BluetoothScanFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         // Inflate the layout for this fragment
-        binding = FragmentBluetoothScanBinding.inflate(inflater, container, false)
+        binding = FragmentBluetoothLeScanBinding.inflate(inflater, container, false)
         return binding.getRoot()
     }
 
@@ -151,7 +151,7 @@ class BluetoothScanFragment : Fragment() {
                 launch {
                     recyclerViewAdapter.onDeviceSelectedFlow.collect { device ->
                         val data = Intent()
-                        data.putExtra(BluetoothScanActivity.EXTRA_DEVICE, device)
+                        data.putExtra(BluetoothLeScanActivity.EXTRA_DEVICE, device)
                         requireActivity().setResult(Activity.RESULT_OK, data)
 
                         //stop scan
@@ -366,8 +366,8 @@ class BluetoothScanFragment : Fragment() {
     companion object {
         // Stops scanning after 10 seconds.
         private const val SCAN_PERIOD: Long = 10000
-        fun newInstance(): BluetoothScanFragment {
-            val fragment = BluetoothScanFragment()
+        fun newInstance(): BluetoothLeScanFragment {
+            val fragment = BluetoothLeScanFragment()
             return fragment
         }
     }

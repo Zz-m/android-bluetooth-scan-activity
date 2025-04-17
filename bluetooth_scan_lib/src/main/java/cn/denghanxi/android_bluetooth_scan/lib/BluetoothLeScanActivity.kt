@@ -14,14 +14,14 @@ import androidx.core.view.OnApplyWindowInsetsListener
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
-class BluetoothScanActivity : AppCompatActivity() {
+class BluetoothLeScanActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_bluetooth_scan)
+        setContentView(R.layout.activity_bluetooth_le_scan)
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .add(R.id.fragment_container, BluetoothScanFragment.newInstance())
+                .add(R.id.fragment_container, BluetoothLeScanFragment.newInstance())
                 .commitNow()
         }
 
@@ -54,12 +54,12 @@ class BluetoothScanActivity : AppCompatActivity() {
     }
 }
 
-class BluetoothDevicePickContract: ActivityResultContract<Unit, BluetoothDevice?>() {
+class BluetoothLeDevicePickContract : ActivityResultContract<Unit, BluetoothDevice?>() {
     override fun createIntent(
         context: Context,
         input: Unit
     ): Intent {
-        return Intent(context, BluetoothScanActivity::class.java)
+        return Intent(context, BluetoothLeScanActivity::class.java)
     }
 
     override fun parseResult(
@@ -69,7 +69,7 @@ class BluetoothDevicePickContract: ActivityResultContract<Unit, BluetoothDevice?
         return if (resultCode != Activity.RESULT_OK) {
             null
         } else {
-            intent?.getParcelableExtra(BluetoothScanActivity.EXTRA_DEVICE)
+            intent?.getParcelableExtra(BluetoothLeScanActivity.EXTRA_DEVICE)
         }
     }
 

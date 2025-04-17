@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.map
 /**
  * Created by dhx on 2021/7/14.
  */
-internal class BluetoothScanViewModel : ViewModel() {
+internal class BluetoothLeScanViewModel : ViewModel() {
 
     private val _refreshRequestFlow = MutableSharedFlow<Boolean>()
     private val _isScanFlow = MutableStateFlow<Boolean>(false)

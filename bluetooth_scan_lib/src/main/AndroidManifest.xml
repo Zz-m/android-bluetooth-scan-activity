@@ -10,7 +10,7 @@
 
     <application>
         <activity
-            android:name=".BluetoothScanActivity"
+            android:name=".BluetoothLeScanActivity"
             android:exported="false" />
     </application>
 

@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.app.AppCompatActivity
 import cn.denghanxi.android_bluetooth_scan.databinding.ActivityMainBinding
-import cn.denghanxi.android_bluetooth_scan.lib.BluetoothDevicePickContract
+import cn.denghanxi.android_bluetooth_scan.lib.BluetoothLeDevicePickContract
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -20,7 +20,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         bluetoothScanLauncher =
-            registerForActivityResult(BluetoothDevicePickContract()) { bluetoothDevice ->
+            registerForActivityResult(BluetoothLeDevicePickContract()) { bluetoothDevice ->
                 val device = bluetoothDevice
                 if (device == null) {
                     Toast.makeText(this, R.string.fail_to_pick_device, Toast.LENGTH_SHORT).show()
