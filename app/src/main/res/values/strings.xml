@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">test-app</string>
+    <string name="app_name">Ble scan demo</string>
     <string name="start_scan_ble">Start scan</string>
     <string name="picked_device">Picked device mac: %1$s</string>
     <string name="fail_to_pick_device">Fail to pick device</string>
