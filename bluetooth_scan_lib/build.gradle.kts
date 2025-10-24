@@ -86,7 +86,7 @@ afterEvaluate {
 
                 groupId = "com.github.Zz-m"
                 artifactId = "android-bluetooth-scan-activity"
-                version = "0.0.8"
+                version = "0.0.9"
             }
         }
     }

@@ -35,7 +35,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener
 import cn.denghanxi.android_bluetooth_scan.lib.BleUtil.checkBlePermission
 import cn.denghanxi.android_bluetooth_scan.lib.databinding.FragmentBluetoothLeScanBinding
 import kotlinx.coroutines.launch
@@ -113,12 +112,12 @@ class BluetoothLeScanFragment : Fragment() {
         binding.recyclerView.addItemDecoration(dividerItemDecoration)
         // swipe refresh
         binding.layoutRefresh.setColorSchemeColors(Color.CYAN, Color.DKGRAY, Color.YELLOW)
-        binding.layoutRefresh.setOnRefreshListener(OnRefreshListener {
+        binding.layoutRefresh.setOnRefreshListener {
 
             lifecycleScope.launch {
                 viewModel.requestRefresh()
             }
-        })
+        }
     }
 
     fun setupViewModel() {
@@ -169,8 +168,13 @@ class BluetoothLeScanFragment : Fragment() {
 
     private fun makeBluetoothAvailable() {
         if (!bluetoothAdapter.isEnabled) {
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            bluetoothDeviceEnableLauncher.launch(enableBtIntent)
+            if (checkBlePermission(requireContext())) {
+                //enable bluetooth adapter require permission
+                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                bluetoothDeviceEnableLauncher.launch(enableBtIntent)
+            } else {
+                checkPermissionAndStartScan()
+            }
         } else {
             checkPermissionAndStartScan()
         }
@@ -186,10 +190,10 @@ class BluetoothLeScanFragment : Fragment() {
                 R.string.scan_request_permission_bluetooth_and_location
             }
             AlertDialog.Builder(requireContext()).setMessage(messageStringRes).setPositiveButton(
-                R.string.ok,
-                DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int ->
-                    blePermissionRequestLauncher.launch(BleUtil.blePermissions)
-                }).setNegativeButton(
+                R.string.ok
+            ) { dialog: DialogInterface?, which: Int ->
+                blePermissionRequestLauncher.launch(BleUtil.blePermissions)
+            }.setNegativeButton(
                 R.string.cancel,
                 (DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int -> requireActivity().finish() })
             ).setCancelable(false).show()
@@ -211,7 +215,7 @@ class BluetoothLeScanFragment : Fragment() {
             return
         }
         // Stops scanning after a pre-defined scan period.
-        handler.postDelayed(Runnable {
+        handler.postDelayed({
             logger.debug("stop scan bluetooth device...")
             stopScanDevice()
         }, SCAN_PERIOD)
