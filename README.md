@@ -9,6 +9,8 @@
 
 [This lib in JitPack](https://jitpack.io/#Zz-m/android-bluetooth-scan-activity)
 
+[![](https://jitpack.io/v/Zz-m/android-bluetooth-scan-activity.svg)](https://jitpack.io/#Zz-m/android-bluetooth-scan-activity)
+
 * ### 2 Import this lib in your module
 
 ```
